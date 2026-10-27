@@ -1,0 +1,1534 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Семечки</title>
+<meta name="description" content="Головоломка с цифрами: убирай линии из одинаковых цифр или с суммой 10.">
+<meta name="theme-color" content="#fff3d6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Семечки">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Comfortaa:wght@600;700&family=Golos+Text:wght@400;500;600&family=Nunito:wght@500;600;700;800;900&display=swap">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; font-size: 14px; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<style>
+/* Layout: одноэкранное приложение — шапка, счётчики, строка подсказки, поле-«поднос» с плитками цифр (подгоняется под экран), нижний док под большой палец; окна — листы снизу.
+   Оформления (data-skin на корне): sunflower — по умолчанию, notebook (тетрадь, светлая и тёмная). */
+:root {
+  /* Подсолнух: масло, семечки, мёд, лист */
+  --paper: #fff3d6;
+  --bg-image: radial-gradient(120% 70% at 15% -10%, #ffe09a 0, transparent 60%), radial-gradient(90% 60% at 110% 110%, #ffd6a8 0, transparent 60%);
+  --surface: #fffcf4;
+  --tray: #f7e6bf;
+  --tile: #fffdf8;
+  --tile-edge: #ead39f;
+  --tile-dead: #f1ddb2;
+  --rule: #ecd8a8;
+  --fg: #3a2817;
+  --muted: #8a6c4b;
+  --ink: #4b3220;
+  --stroke: #7a4f2c;
+  --sel: #ffd25e;
+  --sel-fg: #3a2817;
+  --hint: #f6b52e;
+  --accent: #4f7f3a;
+  --accent-fg: #fffcf2;
+  --margin: #d1582c;
+  --scrim: #3a2817;
+  --font-ui: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Comfortaa", "Nunito", system-ui, sans-serif;
+  --font-digit: "Nunito", system-ui, sans-serif;
+  --digit-weight: 800;
+  --digit-k: .56;
+  --num-k: .78;
+  --gap: 5px;
+  --tray-pad: 7px;
+  --tray-radius: 20px;
+  --cell-radius: 30%;
+  --wrap-pad: 0px;
+  --margin-line: none;
+  --cell: 38px;
+  color-scheme: light;
+}
+:root[data-skin="notebook"] {
+  /* Тетрадь в клетку: синяя ручка, красные поля */
+  --paper: #f5f8fc;
+  --bg-image: linear-gradient(#d3deec 1px, transparent 1px), linear-gradient(90deg, #d3deec 1px, transparent 1px);
+  --surface: #ffffff;
+  --tray: #ffffff;
+  --tile: transparent;
+  --tile-edge: transparent;
+  --tile-dead: transparent;
+  --rule: #d3deec;
+  --fg: #1b2433;
+  --muted: #5e6c83;
+  --ink: #2346a8;
+  --stroke: #2346a8;
+  --sel: #2346a826;
+  --sel-fg: #2346a8;
+  --hint: #e9a400;
+  --accent: #2346a8;
+  --accent-fg: #f5f8fc;
+  --margin: #d2453b;
+  --scrim: #0d1424;
+  --font-ui: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Caveat", "Comic Sans MS", cursive;
+  --font-digit: "Caveat", "Comic Sans MS", cursive;
+  --digit-weight: 700;
+  --digit-k: .74;
+  --num-k: 1;
+  --gap: 0px;
+  --tray-pad: 0px;
+  --tray-radius: 0px;
+  --cell-radius: 0;
+  --wrap-pad: 12px;
+  --margin-line: block;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-skin="notebook"]:not([data-theme="light"]) {
+    --paper: #11161f; --surface: #182030; --tray: #182030; --rule: #232d3d; --fg: #e5ebf4; --muted: #8d9bb2;
+    --bg-image: linear-gradient(#232d3d 1px, transparent 1px), linear-gradient(90deg, #232d3d 1px, transparent 1px);
+    --ink: #8db0ff; --stroke: #8db0ff; --sel: #8db0ff26; --sel-fg: #11161f; --hint: #ffc94a; --accent: #8db0ff; --accent-fg: #11161f;
+    --margin: #ff7b6e; --scrim: #000000; color-scheme: dark;
+  }
+}
+:root[data-skin="notebook"][data-theme="dark"] {
+  --paper: #11161f; --surface: #182030; --tray: #182030; --rule: #232d3d; --fg: #e5ebf4; --muted: #8d9bb2;
+  --bg-image: linear-gradient(#232d3d 1px, transparent 1px), linear-gradient(90deg, #232d3d 1px, transparent 1px);
+  --ink: #8db0ff; --stroke: #8db0ff; --sel: #8db0ff26; --sel-fg: #11161f; --hint: #ffc94a; --accent: #8db0ff; --accent-fg: #11161f;
+  --margin: #ff7b6e; --scrim: #000000; color-scheme: dark;
+}
+
+html { box-sizing: border-box; height: 100%; }
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  height: 100%; overflow: hidden; overscroll-behavior: none;
+  background-color: var(--paper);
+  background-image: var(--bg-image);
+  background-attachment: fixed;
+  color: var(--fg);
+  font-family: var(--font-ui);
+  transition: background-color .3s, color .3s;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+:root[data-skin="notebook"] body { background-size: 22px 22px; background-attachment: scroll; }
+button { touch-action: manipulation; font-family: inherit; }
+
+.app {
+  height: 100%; max-width: 520px; margin: 0 auto;
+  display: flex; flex-direction: column;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px 0;
+}
+
+/* шапка */
+.top { display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+h1 { font: 700 24px/1 var(--font-display); margin: 0; color: var(--ink); letter-spacing: -.01em; }
+:root[data-skin="notebook"] h1 { font-size: 32px; line-height: .9; }
+.stage-chip { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.stage-chip b { color: var(--fg); font-weight: 800; }
+.score { margin-left: auto; text-align: right; line-height: 1; }
+.score b { display: block; font: var(--digit-weight) calc(36px * var(--num-k)) / .95 var(--font-digit); color: var(--fg); font-variant-numeric: tabular-nums; }
+.score span { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.icon-btn {
+  width: 42px; height: 42px; flex: none; border-radius: 14px;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--fg);
+  display: grid; place-items: center; cursor: pointer;
+}
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* счётчики */
+.meters { display: flex; gap: 6px; margin-top: 10px; }
+.meters > div {
+  flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
+  padding: 4px 8px 5px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+  display: flex; align-items: baseline; justify-content: center; gap: 5px; white-space: nowrap;
+  transition: border-color .2s, background-color .3s;
+}
+.meters b { font: var(--digit-weight) calc(22px * var(--num-k)) / 1.1 var(--font-digit); color: var(--fg); letter-spacing: 0; text-transform: none; font-variant-numeric: tabular-nums; transition: color .2s; }
+.meters .hot { border-color: var(--margin); }
+.meters .hot b { color: var(--margin); }
+.combo.bump b { animation: bump .45s ease-out; display: inline-block; }
+@keyframes bump { 40% { transform: scale(1.5) rotate(-6deg); } }
+
+.status {
+  font-size: 13px; line-height: 1.35; color: var(--fg); padding-block: 8px 4px;
+  min-height: calc(2 * 1.35em + 12px);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.status.bad { color: var(--margin); }
+.status .sum { font: var(--digit-weight) calc(20px * var(--num-k)) / 1 var(--font-digit); color: var(--ink); }
+
+/* поле */
+.field { flex: 1; min-height: 0; display: flex; overflow: hidden; padding-block: 4px; }
+.field.scroll { overflow-y: auto; }
+.board-wrap { position: relative; margin: 8px auto auto; padding-left: var(--wrap-pad); }
+.board-wrap::before { content: ""; display: var(--margin-line); position: absolute; left: 3px; top: -6px; bottom: -6px; width: 2px; background: var(--margin); opacity: .75; }
+.board {
+  display: grid; grid-template-columns: repeat(9, var(--cell)); gap: var(--gap);
+  padding: var(--tray-pad); background: var(--tray); border-radius: var(--tray-radius);
+  box-shadow: inset 0 2px 6px -2px color-mix(in srgb, var(--scrim) 18%, transparent);
+  touch-action: none;
+  transition: background-color .3s;
+}
+:root[data-skin="notebook"] .board { border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); box-shadow: none; }
+.field.scroll .board { touch-action: pan-y; }
+.cell {
+  width: var(--cell); height: var(--cell);
+  border: 0; padding: 0; position: relative;
+  background: var(--tile); border-radius: var(--cell-radius);
+  box-shadow: 0 2px 0 var(--tile-edge);
+  font-family: var(--font-digit); font-weight: var(--digit-weight);
+  font-size: calc(var(--cell) * var(--digit-k)); line-height: 1;
+  color: var(--ink);
+  cursor: pointer; display: grid; place-items: center;
+  transition: background-color .15s, box-shadow .15s, transform .15s;
+}
+:root[data-skin="notebook"] .cell { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); box-shadow: none; }
+.cell:focus-visible { outline: 2px solid var(--ink); outline-offset: -3px; }
+.cell.dead, .cell.slot { background: var(--tile-dead); box-shadow: none; cursor: default; }
+.cell.sel { background: var(--sel); box-shadow: 0 2px 0 color-mix(in srgb, var(--hint) 70%, var(--tile-edge)); transform: translateY(-1px); }
+.cell.sel::after {
+  content: ""; position: absolute; inset: 3px; border: 2px solid var(--stroke); border-radius: 50%;
+  transform: rotate(-8deg); opacity: .55;
+}
+:root:not([data-skin="notebook"]) .cell.sel::after { border-radius: inherit; inset: 2px; transform: none; opacity: .35; }
+.cell.sel.ok { background: var(--hint); color: var(--sel-fg); }
+.cell.sel.ok::after { border-color: var(--stroke); opacity: .8; }
+.cell .ord { position: absolute; top: 2px; right: 4px; font: 700 9px var(--font-ui); color: var(--muted); }
+.cell.struck { background: var(--sel); transform: scale(1.08); }
+
+.board.writing .cell.dead, .board.writing .cell.slot { cursor: pointer; background: color-mix(in srgb, var(--hint) 28%, var(--tile-dead)); }
+.board.writing .cell:not(.dead):not(.slot) { cursor: default; opacity: .5; }
+.board.erasing .cell:not(.dead):not(.slot) { box-shadow: 0 2px 0 var(--margin); }
+.cell.target { background: var(--hint) !important; color: var(--sel-fg); }
+.cell.target::after { content: "?"; color: var(--accent-fg); font-family: var(--font-digit); }
+
+.cell.vanish { animation: vanish .28s ease-in forwards; }
+@keyframes vanish { to { opacity: 0; transform: scale(.3) rotate(-12deg); } }
+.cell.hint { animation: hint 1.4s ease-in-out; }
+@keyframes hint { 25%,75% { background: var(--hint); color: var(--sel-fg); } }
+.cell.shake { animation: shake .3s; }
+@keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+.cell.pop { animation: pop .35s ease-out both; }
+@keyframes pop { from { opacity: 0; transform: translateY(6px) scale(.7); } }
+.cell.sweep { animation: sweep .4s ease-out both; animation-delay: calc(var(--col) * 28ms); }
+@keyframes sweep { 35% { background: var(--hint); } }
+.cell.slide { animation: slide .32s cubic-bezier(.2,.8,.3,1) both; }
+@keyframes slide { from { transform: translateY(calc(var(--shift) * (var(--cell) + var(--gap)))); } }
+
+/* линия поверх поля */
+.ink { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.ink path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.ink .preview { stroke: var(--stroke); stroke-width: 3; opacity: .45; stroke-dasharray: 1 8; }
+.ink .stroke { stroke: var(--stroke); stroke-width: 5; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw var(--dur, .26s) ease-out forwards; transition: opacity .28s; }
+.ink.fade .stroke { opacity: 0; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+.float {
+  position: absolute; pointer-events: none; white-space: nowrap; z-index: 2;
+  font: var(--digit-weight) calc(30px * var(--num-k)) / 1 var(--font-digit); color: var(--ink);
+  animation: rise 1s ease-out forwards;
+  text-shadow: 0 0 6px var(--surface), 0 0 2px var(--surface);
+}
+.float .m { color: var(--margin); font-size: .75em; margin-left: 4px; }
+@keyframes rise {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(.7); }
+  20% { opacity: 1; transform: translate(-50%, -70%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -190%) scale(1); }
+}
+
+/* нижний док */
+.dock { position: relative; padding-block: 8px 12px; display: flex; flex-direction: column; gap: 8px; }
+.row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.floater {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 4px); z-index: 5;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.btn {
+  min-height: 50px; border: 1px solid var(--rule); background: var(--surface); color: var(--fg);
+  font: 700 14px var(--font-ui); padding: 6px 8px; border-radius: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  box-shadow: 0 2px 0 var(--rule);
+  transition: transform .1s, background-color .3s;
+}
+.btn svg { width: 18px; height: 18px; flex: none; }
+.btn:active:not(:disabled) { transform: translateY(2px); box-shadow: none; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 60%, var(--scrim)); }
+.btn.commit { background: var(--hint); border-color: var(--hint); color: #2b1d0e; font-size: 15px; box-shadow: 0 6px 18px -6px color-mix(in srgb, var(--scrim) 70%, transparent), 0 2px 0 color-mix(in srgb, var(--hint) 60%, var(--scrim)); }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.btn.pulse { animation: pulse 1s ease-in-out 2; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--hint) 45%, transparent); } }
+
+.bonus {
+  min-height: 42px; border: 1.5px dashed color-mix(in srgb, var(--ink) 60%, transparent); background: var(--surface); color: var(--ink);
+  font: 700 13px var(--font-ui); padding: 4px 6px; border-radius: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.bonus:active:not(:disabled) { transform: scale(.97); }
+.bonus .n {
+  min-width: 20px; height: 20px; border-radius: 10px; background: var(--ink); color: var(--surface);
+  font: 800 12px/20px var(--font-ui); text-align: center; font-variant-numeric: tabular-nums;
+}
+.bonus[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-style: solid; border-color: var(--ink); }
+.bonus[aria-pressed="true"] .n { background: var(--surface); color: var(--ink); }
+.bonus:disabled { opacity: .4; cursor: default; }
+.bonus:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.bonus.gain { animation: pulse 1s ease-in-out 2; }
+
+.picker { background: var(--surface); border: 1px solid var(--rule); border-radius: 18px; padding: 10px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--scrim) 60%, transparent); }
+.picker p { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.picker .x { border: 0; background: none; color: var(--muted); font: 600 13px var(--font-ui); cursor: pointer; text-decoration: underline; padding: 6px; }
+.digits { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; }
+.digits button {
+  border: 0; background: var(--tile); color: var(--ink); border-radius: 10px; box-shadow: 0 2px 0 var(--tile-edge);
+  font-family: var(--font-digit); font-weight: var(--digit-weight); font-size: calc(40px * var(--digit-k)); line-height: 1; padding: 8px 0; cursor: pointer;
+}
+:root[data-skin="notebook"] .digits button { border: 1px solid var(--rule); background: var(--paper); }
+.digits button:active { background: var(--sel); }
+
+/* листы снизу */
+.scrim { position: fixed; inset: 0; z-index: 20; background: color-mix(in srgb, var(--scrim) 40%, transparent); animation: fadein .2s ease-out; }
+@keyframes fadein { from { opacity: 0; } }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 21;
+  max-width: 520px; margin: 0 auto; max-height: 88%; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--surface); color: var(--fg);
+  border-radius: 26px 26px 0 0; border: 1px solid var(--rule); border-bottom: 0;
+  padding-top: 24px;
+  padding-left: max(18px, env(safe-area-inset-left, 0px));
+  padding-right: max(18px, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 40px -12px color-mix(in srgb, var(--scrim) 70%, transparent);
+  animation: up .3s cubic-bezier(.2,.8,.3,1);
+  -webkit-user-select: text; user-select: text;
+}
+.sheet::before { content: ""; position: absolute; top: 9px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 2px; background: var(--rule); }
+@keyframes up { from { transform: translateY(100%); } }
+.sheet h2 { font: 700 28px/1.1 var(--font-display); color: var(--ink); margin: 0 0 8px; text-wrap: balance; }
+:root[data-skin="notebook"] .sheet h2 { font-size: 36px; line-height: 1; }
+.sheet h3 { font: 800 12px var(--font-ui); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 20px 0 8px; }
+.sheet p { margin: 0 0 14px; color: var(--muted); line-height: 1.5; font-size: 14px; }
+.sheet .rec { display: block; margin-top: 6px; color: var(--margin); font-weight: 700; }
+.sheet .rec.old { color: var(--muted); font-weight: 500; }
+.end-actions { display: flex; flex-direction: column; gap: 8px; }
+.end.stuck h2 { color: var(--margin); }
+.sheet .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sheet .note { font-size: 12px; margin: 8px 0 0; }
+.rules { font-size: 14px; color: var(--muted); line-height: 1.5; margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.rules b { color: var(--fg); font-weight: 700; }
+
+/* выбор оформления */
+.skins { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.skin {
+  display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 16px; cursor: pointer;
+  border: 2px solid var(--rule); background: var(--surface); color: var(--fg); font: 700 14px var(--font-ui); text-align: left;
+}
+.skin[aria-pressed="true"] { border-color: var(--ink); }
+.skin:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.swatch { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; font-size: 20px; position: relative; overflow: hidden; }
+.swatch::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
+.skin small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+@media (max-height: 640px) {
+  .meters { margin-top: 6px; }
+  .btn { min-height: 44px; }
+  .bonus { min-height: 38px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell, .btn, .bonus, .combo b, .float, .ink .stroke, .sheet, .scrim { animation: none !important; transition: none !important; }
+  .ink .stroke { stroke-dashoffset: 0; }
+}
+</style>
+</head>
+<body>
+<script>
+  // оформление ставится до отрисовки, чтобы не мигало: сохранённое или по системной теме
+  (function () {
+    var s = null;
+    try { s = localStorage.getItem('semechki-skin'); } catch (e) {}
+    if (s !== 'sunflower' && s !== 'notebook') s = 'sunflower';
+    document.documentElement.setAttribute('data-skin', s);
+  })();
+</script>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Семечки</h1>
+      <span class="stage-chip">Этап <b id="s-stage">1</b></span>
+    </div>
+    <div class="score"><b id="s-score">0</b><span>очки</span></div>
+    <button class="icon-btn" id="b-menu" type="button" aria-label="Меню, оформление и правила">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+    </button>
+  </header>
+
+  <div class="meters">
+    <div class="combo" id="combo"><b id="s-combo">0</b>комбо</div>
+    <div id="height"><b id="s-height">0/14</b>высота</div>
+    <div><b id="s-left">0</b>цифр</div>
+  </div>
+
+  <div class="status" id="status" aria-live="polite"></div>
+
+  <main class="field" id="field">
+    <div class="board-wrap" id="board-wrap">
+      <div class="board" id="board"></div>
+      <svg class="ink" id="ink" aria-hidden="true"><g id="g-preview"></g><g id="g-stroke"></g></svg>
+    </div>
+  </main>
+
+  <div class="dock">
+    <div class="floater">
+      <div class="picker" id="picker" hidden>
+        <p><span>Какую цифру вписать?</span><button class="x" id="pick-cancel" type="button">Отмена</button></p>
+        <div class="digits" id="digits"></div>
+      </div>
+      <button class="btn commit" id="b-commit" type="button" hidden>Убрать</button>
+    </div>
+    <div class="row">
+      <button class="bonus" id="x-write" type="button" aria-pressed="false">Вписать <span class="n" id="n-write">0</span></button>
+      <button class="bonus" id="x-erase" type="button" aria-pressed="false">Стереть <span class="n" id="n-erase">0</span></button>
+      <button class="bonus" id="x-shuffle" type="button">Мешать <span class="n" id="n-shuffle">0</span></button>
+    </div>
+    <div class="row">
+      <button class="btn" id="b-undo" type="button" aria-label="Отменить ход">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Назад
+      </button>
+      <button class="btn" id="b-hint" type="button" aria-label="Подсказка">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>Ход?
+      </button>
+      <button class="btn primary" id="b-add" type="button">Дописать</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<section class="sheet end" id="end" role="dialog" aria-labelledby="end-title" hidden>
+  <h2 id="end-title"></h2>
+  <p id="end-text"></p>
+  <div class="end-actions" id="end-actions"></div>
+</section>
+
+<section class="sheet" id="menu" role="dialog" aria-labelledby="menu-title" hidden>
+  <h2 id="menu-title">Семечки</h2>
+  <h3>Новая игра</h3>
+  <div class="two">
+    <button class="btn" id="m-classic" type="button">Классика</button>
+    <button class="btn" id="m-random" type="button">Случайная</button>
+  </div>
+  <p class="note">Классика начинается с записи из тетради: 1–9 и 10–19 по цифрам. Текущая партия закончится.</p>
+
+  <h3>Оформление</h3>
+  <div class="skins" id="skins">
+    <button class="skin" type="button" data-skin="sunflower">
+      <span class="swatch" style="background:#fff3d6;color:#4b3220;font:800 22px Nunito,sans-serif;--dot:#4f7f3a">7</span>
+      <span>Подсолнух<small>мёд и семечки</small></span>
+    </button>
+    <button class="skin" type="button" data-skin="notebook">
+      <span class="swatch" style="background:#f5f8fc;color:#2346a8;font:700 30px Caveat,cursive;--dot:#d2453b">7</span>
+      <span>Тетрадь<small>синяя ручка</small></span>
+    </button>
+  </div>
+
+  <h3>Как играть</h3>
+  <ul class="rules">
+    <li>Убирай цифры, стоящие подряд на одной прямой: по горизонтали, вертикали или диагонали. Пустые клетки между ними не мешают.</li>
+    <li>Линия годится, если <b>все цифры одинаковые</b> (7 7, 1 1 1) или <b>их сумма ровно 10</b> (3 7, 3 3 4, 1 2 3 4).</li>
+    <li><b>Проведи пальцем</b> по цифрам вдоль линии и отпусти. Или нажимай цифры по очереди.</li>
+    <li>По горизонтали можно переходить через перенос строки: последняя цифра строки и первая цифра следующей стоят рядом.</li>
+    <li>Очки: пара — 1, тройка — 3, четвёрка — 6. Пустая строка исчезает и даёт +10.</li>
+    <li><b>Комбо</b> — три и больше одинаковых цифр: «количество × цифра», 7 7 7 = 21.</li>
+    <li>«Дописать» добавляет те же оставшиеся цифры в порядке, который даёт новые ходы. 5 раз за этап. Поле не выше 14 строк.</li>
+    <li><b>Этапы.</b> Очистил поле: +100 × этап и +25 за каждое неиспользованное дописывание, дописывания снова 5. Бонусы не восстанавливаются.</li>
+    <li><b>Бонусы.</b> «Вписать» — любая цифра в пустую клетку. «Стереть» — убрать цифру. «Мешать» — переставить оставшиеся цифры.</li>
+    <li>Ходов нет и дописать нельзя — игра окончена.</li>
+  </ul>
+  <div style="margin-top:18px"><button class="btn primary" id="menu-close" type="button" style="width:100%">Играть</button></div>
+</section>
+
+<script>
+const W = 9;            // ширина поля
+const MAX_ADDS = 5;     // сколько раз можно дописать за этап
+const MAX_ROWS = 14;    // максимальная высота поля
+const START_BONUS = { write: 2, erase: 2, shuffle: 2 };
+const BONUS_NAMES = { write: 'Вписать', erase: 'Стереть', shuffle: 'Перемешать' };
+// направления линии: по порядку чтения (горизонталь + перенос), вниз, диагональ ↘, диагональ ↙
+const DIRS = [[null, null], [1, 0], [1, 1], [1, -1]];
+const ALL_DIRS = [0, 1, 2, 3];
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+let S;                       // состояние игры (сохраняется)
+let chain = [];              // выбранная линия (индексы клеток по порядку вдоль линии)
+let chainDirs = ALL_DIRS;    // направления, в которых эта линия непрерывна
+let tool = null;             // активный бонус: 'write' | 'erase' | null
+let writeTarget = -1;        // клетка, куда вписываем
+let busy = false;            // идёт анимация хода — клики ждут
+let striking = new Set();    // цифры, через которые сейчас проводится черта
+let vanish = new Set();      // цифры, которые сейчас исчезают
+let sweep = new Set();       // клетки очищаемых строк
+let pops = new Set();        // только что появившиеся цифры
+let slideShift = null;       // на сколько строк сдвинулась каждая строка после удаления
+let history = [];
+
+const $ = id => document.getElementById(id);
+const boardEl = $('board');
+const wrapEl = $('board-wrap');
+const inkEl = $('ink');
+
+function save() { try { localStorage.setItem('semechki', JSON.stringify(S)); } catch (e) {} }
+function load() { try { return JSON.parse(localStorage.getItem('semechki')); } catch (e) { return null; } }
+
+function loadRecords() { try { return JSON.parse(localStorage.getItem('semechki-records')) || {}; } catch (e) { return {}; } }
+function saveRecords(r) { try { localStorage.setItem('semechki-records', JSON.stringify(r)); } catch (e) {} }
+
+/* =====================================================================
+   ГЕНЕРАТОР ЦИФР
+   ===================================================================== */
+
+/* ---------- случайность с сидом ----------
+   Генератор mulberry32: всё его состояние — одно число S.rng, оно сохраняется вместе с партией.
+   «Отменить» откатывает и его, поэтому переиграть «Дописать» или «Перемешать» ради удачи нельзя:
+   тот же ход даст тот же результат. Сид пригодится и для ежедневного задания (одно поле у всех). */
+function freshSeed() {
+  try { return crypto.getRandomValues(new Uint32Array(1))[0] | 0; }
+  catch (e) { return (Math.random() * 4294967296) | 0; }
+}
+function rnd() {
+  let t = (S.rng = (S.rng + 0x6D2B79F5) | 0);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+const randInt = n => Math.floor(rnd() * n);
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+function shuffled(a) {
+  a = a.slice();
+  for (let k = a.length - 1; k > 0; k--) { const j = randInt(k + 1); [a[k], a[j]] = [a[j], a[k]]; }
+  return a;
+}
+// перемешать кусками по size: локальный порядок цифр сохраняется, общий — меняется
+function chunkShuffle(a, size) {
+  const chunks = [];
+  for (let k = 0; k < a.length; k += size) chunks.push(a.slice(k, k + size));
+  return shuffled(chunks).flat();
+}
+
+/* ---------- мешок цифр ----------
+   Как в тетрисе: все 9 цифр лежат в мешке по разу, тянем по одной, мешок кончился — новый.
+   Обычный рандом может выдать пять семёрок подряд и ни одной тройки; мешок так не может. */
+function digitBag() {
+  let bag = [];
+  return () => {
+    if (!bag.length) bag = shuffled([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    return bag.pop();
+  };
+}
+
+/* ---------- цифры парами ----------
+   Каждая цифра приходит с напарником: такой же цифрой или дополнением до 10 (3 → 3 или 7).
+   Значит, у любой цифры на поле есть «ответ», и поле в принципе разбирается до конца.
+   sameShare — доля одинаковых пар: больше одинаковых → больше шансов на комбо. */
+function pairedDigits(count, sameShare) {
+  const next = digitBag(), out = [];
+  while (out.length < count) {
+    const a = next();
+    out.push(a, rnd() < sameShare ? a : 10 - a);
+  }
+  return shuffled(out).slice(0, count);
+}
+
+/* ---------- анализ поля ----------
+   Считает все линии, которые можно убрать прямо сейчас, и сколько среди них комбо.
+   Это главная мера «лёгкости» поля: ходов на одну цифру (плотность). */
+function withCells(cells, fn) {
+  const keep = S.cells; S.cells = cells;
+  try { return fn(); } finally { S.cells = keep; }
+}
+function analyze(cells) {
+  return withCells(cells, () => {
+    let moves = 0, combos = 0;
+    const c = S.cells;
+    for (let i = 0; i < c.length; i++) {
+      if (c[i].dead) continue;
+      for (const d of ALL_DIRS) {
+        const line = [i];
+        let k = i;
+        while ((k = step(k, d, 1)) >= 0 && line.length < 7) {
+          line.push(k);
+          const e = evalLine(line);
+          if (e.valid) { moves++; if (line.length >= 3 && e.same) combos++; }
+          if (!e.alive) break;
+        }
+      }
+    }
+    const alive = c.filter(x => !x.dead).length;
+    return { moves, combos, density: alive ? moves / alive : 0 };
+  });
+}
+
+// кучки: три и больше одинаковых цифр подряд в строке выглядят «нечестно» и дарят комбо
+function clumps(cells) {
+  let pen = 0, run = 1;
+  for (let i = 1; i < cells.length; i++) {
+    if (i % W && !cells[i].dead && !cells[i - 1].dead && cells[i].v === cells[i - 1].v) {
+      if (++run >= 3) pen++;
+    } else run = 1;
+  }
+  return pen;
+}
+
+/* ---------- кривая сложности ----------
+   С ростом этапа: на старте меньше готовых ходов, меньше одинаковых пар, меньше подаренных комбо.
+   MEDIAN_DENSITY — медианная плотность случайного поля такой высоты, измерена симуляцией
+   (по 1500 полей на высоту). Чем выше поле, тем больше соседей у цифры, тем выше плотность.
+   Цель этапа — медиана × множитель: 1.3 (лёгкое поле, ~верхние 10%) → 0.75 (трудное, ~нижние 5%). */
+const MEDIAN_DENSITY = { 3: 0.63, 4: 0.72, 5: 0.80, 6: 0.84, 7: 0.87 };
+const EASY_K = 1.3, HARD_K = 0.75;
+function stageParams(stage) {
+  const t = clamp((stage - 1) / 8, 0, 1);       // 0 на первом этапе, 1 с девятого
+  const rows = Math.min(2 + stage, 7);
+  return {
+    rows,
+    density: MEDIAN_DENSITY[rows] * lerp(EASY_K, HARD_K, t),   // целевое число ходов на одну цифру
+    sameShare: lerp(0.35, 0.18, t),             // доля пар из одинаковых цифр
+    maxCombos: stage <= 2 ? 2 : stage <= 5 ? 1 : 0,
+  };
+}
+
+// штраф поля: насколько оно далеко от нужной сложности (0 — идеально)
+function boardPenalty(cells, p) {
+  const a = analyze(cells);
+  if (a.moves === 0) return 1e9;                // поле без хода не годится никогда
+  return Math.abs(a.density - p.density) * 20
+       + Math.max(0, a.combos - p.maxCombos) * 3
+       + clumps(cells) * 1.5;
+}
+
+/* ---------- поле этапа ----------
+   Классика, этап 1 — запись из тетради. Иначе: 40 кандидатов из «цифр парами»,
+   у каждого считается штраф, берётся лучший. Так сложность попадает в цель, а поле остаётся случайным. */
+const CANDIDATES = 40;
+function makeBoard(mode, stage) {
+  if (mode === 'classic' && stage === 1) {
+    // 1..9, затем 10..19 по цифрам (нули выкидываем)
+    return [...'123456789111213141516171819'].map(ch => ({ v: +ch, dead: false }));
+  }
+  const p = stageParams(stage), n = p.rows * W;
+  let best = null, bestPen = Infinity;
+  for (let k = 0; k < CANDIDATES; k++) {
+    const cells = pairedDigits(n, p.sameShare).map(v => ({ v, dead: false }));
+    const pen = boardPenalty(cells, p);
+    if (pen < bestPen) { best = cells; bestPen = pen; }
+  }
+  return best;
+}
+
+/* ---------- умное «Дописать» ----------
+   Правило игры прежнее: дописываются те же цифры, что остались на поле, и столько же.
+   Меняется только порядок. Пробуем 10 вариантов: как есть, задом наперёд, со сдвигом,
+   перемешанные кусками и полностью. Для каждого считаем, сколько НОВЫХ ходов он даёт.
+   Затем выбираем по «уровню помощи»:
+   — чем больше дописываний уже потрачено на этапе, тем помощь сильнее (игроку тяжело);
+   — чем дальше этап, тем помощь слабее.
+   Гарантия от тупика: если хоть один вариант даёт ход, вариант без ходов не выбирается.
+   Если ни один не даёт — первая дописанная цифра подбирается в пару к последней цифре поля. */
+function planAdd() {
+  const base = S.cells;
+  const vals = base.filter(x => !x.dead).map(x => x.v);
+  const before = analyze(base).moves;
+
+  const orders = [vals, vals.slice().reverse()];
+  for (let k = 0; k < 2; k++) {
+    const r = 1 + randInt(Math.max(1, vals.length - 1));
+    orders.push(vals.slice(r).concat(vals.slice(0, r)));
+  }
+  for (let k = 0; k < 3; k++) orders.push(chunkShuffle(vals, 3));
+  for (let k = 0; k < 3; k++) orders.push(shuffled(vals));
+
+  const opts = orders
+    .map(o => ({ order: o, gain: analyze(base.concat(o.map(v => ({ v, dead: false })))).moves - before }))
+    .sort((a, b) => a.gain - b.gain);           // от самого скупого к самому щедрому
+
+  const used = MAX_ADDS - S.adds;
+  const help = clamp(0.55 - 0.05 * (S.stage - 1) + 0.12 * used, 0.15, 0.95);
+  let pick = opts[Math.round(help * (opts.length - 1))];
+  if (pick.gain <= 0) pick = opts.find(o => o.gain > 0) || pick;
+
+  const order = pick.order.slice();
+  let rescued = false;
+  if (pick.gain <= 0 && order.length) {
+    let last = -1;
+    for (let i = base.length - 1; i >= 0; i--) if (!base[i].dead) { last = base[i].v; break; }
+    if (last > 0) { order[0] = rnd() < 0.5 ? last : 10 - last; rescued = true; }
+  }
+  return { order, rescued, help };
+}
+
+/* ---------- умное «Перемешать» ----------
+   24 варианта перестановки, берётся случайный из 4 лучших по числу ходов:
+   бонус должен помогать, но не быть всегда одинаково «идеальным». */
+function planShuffle() {
+  const idx = [], vals = [];
+  S.cells.forEach((x, i) => { if (!x.dead) { idx.push(i); vals.push(x.v); } });
+  const cands = [];
+  for (let k = 0; k < 24; k++) {
+    const sv = shuffled(vals);
+    const cells = S.cells.map(x => ({ ...x }));
+    idx.forEach((i, j) => { cells[i].v = sv[j]; });
+    cands.push({ cells, moves: analyze(cells).moves });
+  }
+  cands.sort((a, b) => b.moves - a.moves);
+  return { cells: cands[randInt(Math.min(4, cands.length))].cells, idx };
+}
+
+function newGame(mode) {
+  if (busy) return;
+  S = { mode, stage: 1, cells: [], rng: freshSeed(), score: 0, rows: 0, best: 0, combos: 0, bestCombo: 0, adds: MAX_ADDS,
+        bonus: { ...START_BONUS }, over: null, cleared: false, stageBonus: 0, newRecord: false };
+  const cells = S.cells = makeBoard(mode, 1);
+  resetUI(); history = [];
+  pops = new Set(cells.map((_, i) => i));
+  setStatus('Этап 1. Выбери цифру.');
+  render(); save();
+}
+
+function nextStage() {
+  if (!S.cleared) return;
+  S.stage++;
+  S.cells = makeBoard(S.mode, S.stage);
+  S.adds = MAX_ADDS;
+  S.cleared = false;
+  resetUI(); history = [];
+  pops = new Set(S.cells.map((_, i) => i));
+  setStatus(`Этап ${S.stage}. Дописывания снова 5.`);
+  render(); save();
+}
+
+// поле очищено — этап пройден
+function stageClear() {
+  S.cleared = true;
+  S.stageBonus = 100 * S.stage + 25 * S.adds;
+  S.score += S.stageBonus;
+  resetToolAndChain();
+}
+
+// игра окончена: зафиксировать рекорд
+function finishGame() {
+  if (S.over) return;
+  S.over = 'end';
+  resetToolAndChain();
+  const rec = loadRecords();
+  const prev = rec[S.mode] || { score: 0 };
+  S.newRecord = S.score > prev.score;
+  S.prevRecord = prev.score;
+  if (S.newRecord) { rec[S.mode] = { score: S.score, stage: S.stage }; saveRecords(rec); }
+  render(); save();
+}
+
+const aliveCount = () => S.cells.filter(x => !x.dead).length;
+const totalBonus = () => S.bonus.write + S.bonus.erase + S.bonus.shuffle;
+const rowsAfterAdd = () => Math.ceil((S.cells.length + aliveCount()) / W);
+const canAdd = () => S.adds > 0 && rowsAfterAdd() <= MAX_ROWS;
+const isStuck = () => !S.over && !S.cleared && aliveCount() > 0 && !findMove();
+const locked = () => busy || !!S.over || S.cleared;
+
+/* ---------- геометрия ---------- */
+const rowOf = i => Math.floor(i / W);
+
+// ближайшая непустая клетка от i в направлении d (sign = 1 вперёд, -1 назад)
+function step(i, d, sign) {
+  const c = S.cells, [dr, dc] = DIRS[d];
+  if (dr === null) {
+    for (let k = i + sign; k >= 0 && k < c.length; k += sign) if (!c[k].dead) return k;
+    return -1;
+  }
+  let r = rowOf(i) + dr * sign, col = (i % W) + dc * sign;
+  while (r >= 0 && col >= 0 && col < W) {
+    const k = r * W + col;
+    if (k >= c.length) return -1;
+    if (!c[k].dead) return k;
+    r += dr * sign; col += dc * sign;
+  }
+  return -1;
+}
+
+/* ---------- правила линии ---------- */
+function evalLine(idx) {
+  const vals = idx.map(i => S.cells[i].v);
+  const sum = vals.reduce((a, b) => a + b, 0);
+  const same = vals.every(v => v === vals[0]);
+  return {
+    vals, sum, same,
+    valid: idx.length >= 2 && (same || sum === 10),   // можно убрать
+    alive: same || sum <= 10,                          // правильная или ещё может стать правильной
+  };
+}
+
+// можно ли продлить уже правильную линию до другой правильной (или перспективной)
+function canGrow() {
+  const e = evalLine(chain);
+  const first = chain[0], last = chain[chain.length - 1];
+  for (const d of chainDirs) {
+    for (const n of [step(last, d, 1), step(first, d, -1)]) {
+      if (n < 0) continue;
+      const v = S.cells[n].v;
+      if ((e.same && v === e.vals[0]) || e.sum + v <= 10) return true;
+    }
+  }
+  return false;
+}
+
+// попробовать добавить клетку t к концу или началу линии
+function tryExtend(t) {
+  if (!chain.length) { chain = [t]; chainDirs = ALL_DIRS; return true; }
+  const first = chain[0], last = chain[chain.length - 1];
+  const app = chainDirs.filter(d => step(last, d, 1) === t);
+  if (app.length) { chain.push(t); chainDirs = app; return true; }
+  const pre = chainDirs.filter(d => step(first, d, -1) === t);
+  if (pre.length) { chain.unshift(t); chainDirs = pre; return true; }
+  return false;
+}
+
+// найти любой возможный ход (для подсказки и проверки конца игры)
+function findMove() {
+  const c = S.cells;
+  for (let i = 0; i < c.length; i++) {
+    if (c[i].dead) continue;
+    for (const d of ALL_DIRS) {
+      const line = [i];
+      let k = i;
+      while ((k = step(k, d, 1)) >= 0) {
+        line.push(k);
+        const e = evalLine(line);
+        if (e.valid) return line;
+        if (!e.alive) break;
+      }
+    }
+  }
+  return null;
+}
+
+const points = n => n * (n - 1) / 2;   // обычная линия: 2→1, 3→3, 4→6, 5→10
+
+// очки за линию: 3+ одинаковые цифры — комбо «количество × цифра», иначе обычные очки
+function scoreLine(idx) {
+  const e = evalLine(idx), n = idx.length;
+  if (n >= 3 && e.same) {
+    const v = e.vals[0];
+    return { pts: Math.max(n * v, points(n)), combo: true, n, v };
+  }
+  return { pts: points(n), combo: false, n };
+}
+
+/* ---------- ходы ---------- */
+function snapshot() {
+  history.push(JSON.stringify(S));
+  if (history.length > 60) history.shift();
+}
+
+function clearChain() { chain = []; chainDirs = ALL_DIRS; }
+function resetUI() {
+  clearChain(); tool = null; writeTarget = -1; busy = false;
+  striking.clear(); vanish.clear(); sweep.clear(); pops.clear(); slideShift = null;
+  $('g-stroke').replaceChildren(); inkEl.classList.remove('fade');
+}
+
+function commit() {
+  if (busy) return;
+  const e = evalLine(chain);
+  if (!e.valid) return;
+  snapshot();
+  const line = chain.slice(), dirs = chainDirs.slice();
+  const sc = scoreLine(line), n = sc.n, pts = sc.pts;
+  line.forEach(i => { S.cells[i].dead = true; });
+  S.score += pts;
+  S.best = Math.max(S.best || 0, n);
+  let msg;
+  if (sc.combo) {
+    S.combos = (S.combos || 0) + 1;
+    S.bestCombo = Math.max(S.bestCombo || 0, pts);
+    msg = `${e.vals.join(' · ')} — комбо! ${n} × ${sc.v} = +${pts}`;
+    bumpCombo();
+  } else {
+    const expr = e.same && e.sum !== 10 ? e.vals.join(' · ') : `${e.vals.join(' + ')} = 10`;
+    msg = `${expr}. ${n === 2 ? 'Пара' : `Линия из ${n}`}: +${pts}`;
+  }
+  clearChain();
+  clearCells(line, msg, { stroke: true, dirs, pts, label: sc.combo ? `${n}×${sc.v}` : '' });
+}
+
+function bumpCombo() {
+  const el = $('combo');
+  el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+}
+
+const wait = (ms, fn) => (prefersReduced() || ms === 0) ? fn() : setTimeout(fn, ms);
+
+// анимация удаления: черта → исчезновение → волна по пустым строкам → сдвиг строк
+function clearCells(idxs, msg, opt = {}) {
+  busy = true;
+  setStatus(msg);
+  striking = opt.stroke ? new Set(idxs) : new Set();
+  render();
+  if (opt.stroke) drawStroke(idxs, opt.dirs);
+  if (opt.pts) floatAt(idxs[idxs.length - 1], opt.pts, opt.label);
+
+  wait(opt.stroke ? 300 : 0, () => {
+    striking.clear();
+    vanish = new Set(idxs);
+    inkEl.classList.add('fade');
+    render();
+    wait(280, () => {
+      vanish.clear();
+      $('g-stroke').replaceChildren(); inkEl.classList.remove('fade');
+      const rows = emptyRows();
+      if (!rows.length) { finishClear(msg, 0); return; }
+      sweep = new Set();
+      rows.forEach(r => { for (let c = 0; c < W; c++) sweep.add(r * W + c); });
+      render();
+      wait(420, () => { sweep.clear(); finishClear(msg, removeEmptyRows()); });
+    });
+  });
+}
+
+function finishClear(msg, removed) {
+  trimTail();
+  if (removed) {
+    S.rows += removed; S.score += removed * 10;
+    const got = reward(removed);
+    setStatus(`${msg}. ${removed === 1 ? 'Строка убрана' : `Убрано строк: ${removed}`}: +${removed * 10}. Бонус: ${got.map(k => BONUS_NAMES[k]).join(', ')} +1`);
+    got.forEach(k => pulse($('x-' + k), 'gain'));
+  }
+  busy = false;
+  checkEnd(); render(); save();
+}
+
+function reward(n) {
+  const keys = Object.keys(START_BONUS), got = [];
+  for (let k = 0; k < n; k++) {
+    const key = keys[randInt(keys.length)];
+    S.bonus[key]++; got.push(key);
+  }
+  return got;
+}
+
+function emptyRows() {
+  const c = S.cells, out = [];
+  for (let r = 0; r * W < c.length; r++) {
+    if (c.slice(r * W, r * W + W).every(x => x.dead)) out.push(r);
+  }
+  return out;
+}
+
+function removeEmptyRows() {
+  const c = S.cells, out = [], shifts = [];
+  let removed = 0;
+  for (let r = 0; r * W < c.length; r++) {
+    const row = c.slice(r * W, r * W + W);
+    if (row.every(x => x.dead)) { removed++; continue; }
+    out.push(...row);
+    shifts.push(removed);   // новая строка поднялась на столько строк
+  }
+  S.cells = out;
+  slideShift = removed ? shifts : null;
+  return removed;
+}
+
+// хвост последней строки из пустых клеток не нужен
+function trimTail() { while (S.cells.length && S.cells[S.cells.length - 1].dead) S.cells.pop(); }
+
+function addNumbers() {
+  if (locked() || S.adds <= 0) return;
+  if (!canAdd()) {
+    setStatus(`Не помещается: станет ${rowsAfterAdd()} строк, а максимум ${MAX_ROWS}. Убери несколько строк или используй бонус.`, true);
+    return;
+  }
+  snapshot();
+  const { order, rescued } = planAdd();
+  const from = S.cells.length;
+  S.cells.push(...order.map(v => ({ v, dead: false })));
+  pops = new Set(order.map((_, k) => from + k));
+  S.adds--; resetToolAndChain();
+  setStatus(`Дописано ${order.length} цифр.${rescued ? ' Первая подобрана так, чтобы появился ход.' : ''} Осталось дописываний: ${S.adds}.`);
+  checkEnd(); render(); save();
+  scrollFieldEnd();
+}
+
+function undo() {
+  if (busy || !history.length) return;
+  S = JSON.parse(history.pop());
+  resetUI();
+  setStatus('Ход отменён.');
+  render(); save();
+}
+
+function hint() {
+  if (locked()) return;
+  resetToolAndChain();
+  const m = findMove();
+  if (!m) {
+    if (canAdd()) { setStatus('Ходов нет. Дописывай цифры или используй бонус.'); pulse($('b-add')); }
+    else if (totalBonus() > 0) setStatus('Ходов нет. Используй бонус.');
+    else setStatus('Ходов нет.', true);
+    render();
+    return;
+  }
+  S.score = Math.max(0, S.score - 1);
+  const e = evalLine(m);
+  setStatus(`Есть ход: ${e.vals.join(' ')}. Подсказка стоит 1 очко.`);
+  render();
+  m.forEach(i => flash(i, 'hint', 1400));
+  save();
+}
+
+// после каждого хода: этап пройден? тупик без вариантов — конец игры
+function checkEnd() {
+  if (S.over || S.cleared) return;
+  if (aliveCount() === 0) { stageClear(); return; }
+  if (isStuck() && !canAdd()) finishGame();   // ходов нет и дописать нельзя — конец, бонусы не спасают
+}
+
+/* ---------- бонусы ---------- */
+function resetToolAndChain() { tool = null; writeTarget = -1; clearChain(); }
+
+function toggleTool(name) {
+  if (locked() || S.bonus[name] <= 0) return;
+  if (tool === name) { resetToolAndChain(); setStatus('Бонус отменён. Выбери цифру.'); render(); return; }
+  resetToolAndChain();
+  tool = name;
+  setStatus(name === 'write'
+    ? 'Вписать: нажми на пустую клетку. Нажми «Вписать» ещё раз для отмены.'
+    : 'Стереть: нажми на цифру, которую убрать. Нажми «Стереть» ещё раз для отмены.');
+  render();
+}
+
+function chooseWriteTarget(i) {
+  writeTarget = i;
+  setStatus('Выбери цифру внизу.');
+  render();
+  const first = $('digits').querySelector('button');
+  if (first) first.focus({ preventScroll: true });
+}
+
+function writeDigit(v) {
+  if (busy || writeTarget < 0) return;
+  snapshot();
+  const i = writeTarget;
+  while (S.cells.length <= i) S.cells.push({ v: 0, dead: true });
+  S.cells[i] = { v, dead: false };
+  S.bonus.write--;
+  pops = new Set([i]);
+  resetToolAndChain();
+  setStatus(`Вписана ${v}.`);
+  checkEnd(); render(); save();
+}
+
+function eraseCell(i) {
+  snapshot();
+  const v = S.cells[i].v;
+  S.cells[i].dead = true;
+  S.bonus.erase--;
+  resetToolAndChain();
+  clearCells([i], `Стёрта ${v}`);
+}
+
+function shuffle() {
+  if (locked() || S.bonus.shuffle <= 0) return;
+  snapshot();
+  resetToolAndChain();
+  const { cells, idx } = planShuffle();
+  S.cells = cells;
+  S.bonus.shuffle--;
+  pops = new Set(idx);
+  setStatus('Цифры перемешаны.');
+  checkEnd(); render(); save();
+}
+
+/* ---------- клики ---------- */
+function onCell(t) {
+  if (locked()) return;
+  const empty = t >= S.cells.length || S.cells[t].dead;
+
+  if (tool === 'write') {
+    if (empty) chooseWriteTarget(t);
+    else setStatus('Здесь уже есть цифра. Нажми на пустую клетку.', true);
+    return;
+  }
+  if (tool === 'erase') {
+    if (!empty) eraseCell(t);
+    return;
+  }
+  if (empty) return;
+
+  // повторное нажатие на выбранную цифру: убрать линию, если она годится, иначе сбросить
+  if (chain.includes(t)) {
+    if (evalLine(chain).valid) commit();
+    else { clearChain(); setStatus('Выбор снят. Выбери цифру.'); render(); }
+    return;
+  }
+
+  if (!tryExtend(t)) {
+    setStatus('Эта цифра не продолжает линию: она не на той же прямой или между ними есть цифры. Начинаем новую линию с неё.', true);
+    chain.forEach(i => flash(i, 'shake', 300));
+    clearChain(); chain = [t];
+    render(); flash(t, 'shake', 300);
+    return;
+  }
+
+  if (chain.length === 1) { setStatus(firstPrompt(S.cells[t].v)); render(); return; }
+
+  const e = evalLine(chain);
+  if (!e.alive) {
+    setStatus(`${e.vals.join(' + ')} = ${e.sum}, перебор. Начинаем новую линию с ${S.cells[t].v}.`, true);
+    chain.forEach(i => flash(i, 'shake', 300));
+    clearChain(); chain = [t];
+    render();
+    return;
+  }
+
+  if (e.valid && !canGrow()) { commit(); return; }
+
+  if (e.valid) {
+    const sc = scoreLine(chain);
+    const what = sc.combo ? `${e.vals.join(' · ')} — комбо ${sc.n} × ${sc.v} = ${sc.pts}`
+      : e.sum === 10 ? `${e.vals.join(' + ')} = 10` : `${e.vals.join(' · ')}, все одинаковые`;
+    const tip = e.same && chain.length === 2 && e.vals[0] > 1 ? ' Третья такая же цифра даст комбо.' : '';
+    setStatusHTML(`<span class="sum">${what}</span><br>Можно убрать или продолжить линию.${tip}`);
+  } else {
+    const need = 10 - e.sum;
+    setStatusHTML(`<span class="sum">${e.vals.join(' + ')} = ${e.sum}</span><br>Нужно ещё ${need}${e.same ? ` или ещё одна ${e.vals[0]}` : ''}. Продолжай по той же прямой.`);
+  }
+  render();
+}
+
+function firstPrompt(v) {
+  return v === 5
+    ? 'Выбрано 5. Ищи рядом 5 или цифры, которые вместе дают ещё 5.'
+    : `Выбрано ${v}. Ищи рядом ${v} или ${10 - v} (можно несколькими цифрами).`;
+}
+
+/* ---------- карандашный слой ---------- */
+function cellEl(i) { return boardEl.querySelector(`[data-i="${i}"]`); }
+function center(i) {
+  const el = cellEl(i);
+  return el ? [el.offsetLeft + el.offsetWidth / 2, el.offsetTop + el.offsetHeight / 2] : [0, 0];
+}
+
+// отрезки черты через клетки линии; перенос строки рисуется двумя штрихами к краям поля
+function segmentsFor(idxs, dirs) {
+  const segs = [];
+  const readingOnly = dirs.length === 1 && dirs[0] === 0;
+  const L = boardEl.offsetLeft - 4, R = boardEl.offsetLeft + boardEl.offsetWidth + 4;
+  const ext = boardEl.offsetWidth / W * 0.28;   // немного выводим черту за крайние цифры
+  for (let k = 0; k < idxs.length - 1; k++) {
+    const a = idxs[k], b = idxs[k + 1];
+    const [x1, y1] = center(a), [x2, y2] = center(b);
+    if (readingOnly && rowOf(a) !== rowOf(b)) {
+      segs.push([x1, y1, R, y1]);
+      segs.push([L, y2, x2, y2]);
+    } else segs.push([x1, y1, x2, y2]);
+  }
+  if (segs.length) {
+    const f = segs[0], l = segs[segs.length - 1];
+    const stretch = (s, atStart) => {
+      const dx = s[2] - s[0], dy = s[3] - s[1], len = Math.hypot(dx, dy) || 1;
+      if (atStart) { s[0] -= dx / len * ext; s[1] -= dy / len * ext; }
+      else { s[2] += dx / len * ext; s[3] += dy / len * ext; }
+    };
+    stretch(f, true); stretch(l, false);
+  }
+  return segs;
+}
+
+function sizeInk() {
+  inkEl.setAttribute('width', wrapEl.offsetWidth);
+  inkEl.setAttribute('height', wrapEl.offsetHeight);
+}
+
+function drawPreview() {
+  const g = $('g-preview');
+  g.replaceChildren();
+  if (chain.length < 2 || busy) return;
+  for (const [x1, y1, x2, y2] of segmentsFor(chain, chainDirs)) {
+    const p = document.createElementNS(SVGNS, 'path');
+    p.setAttribute('d', `M${x1} ${y1}L${x2} ${y2}`);
+    p.setAttribute('class', 'preview');
+    g.appendChild(p);
+  }
+}
+
+function drawStroke(idxs, dirs) {
+  const g = $('g-stroke');
+  g.replaceChildren();
+  $('g-preview').replaceChildren();
+  const segs = segmentsFor(idxs, dirs);
+  const total = segs.reduce((s, [a, b, c, d]) => s + Math.hypot(c - a, d - b), 0) || 1;
+  const T = 260;   // вся черта рисуется за это время, отрезки по очереди
+  let t = 0;
+  for (const [x1, y1, x2, y2] of segs) {
+    const dur = T * Math.hypot(x2 - x1, y2 - y1) / total;
+    // лёгкая дрожь руки: изгиб посередине отрезка
+    const mx = (x1 + x2) / 2 + (Math.random() - .5) * 3, my = (y1 + y2) / 2 + (Math.random() - .5) * 3;
+    const p = document.createElementNS(SVGNS, 'path');
+    p.setAttribute('d', `M${x1} ${y1}Q${mx} ${my} ${x2} ${y2}`);
+    p.setAttribute('pathLength', '1');
+    p.setAttribute('class', 'stroke');
+    p.style.setProperty('--dur', `${dur}ms`);
+    p.style.animationDelay = `${t}ms`;
+    t += dur;
+    g.appendChild(p);
+  }
+}
+
+function floatAt(i, pts, label) {
+  const [x, y] = center(i);
+  const el = document.createElement('div');
+  el.className = 'float';
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+  el.innerHTML = `+${pts}${label ? `<span class="m">комбо ${label}</span>` : ''}`;
+  wrapEl.appendChild(el);
+  setTimeout(() => el.remove(), 1050);
+}
+
+/* ---------- раскладка под экран ---------- */
+const fieldEl = $('field');
+// размер клетки: по ширине экрана, но так, чтобы всё поле влезло по высоте;
+// если и при минимальной клетке не влезает — поле прокручивается
+function layout() {
+  const rows = Math.max(Math.ceil((S.cells.length || 1) / W), 1);
+  // зазоры между плитками и поля «подноса» зависят от оформления — берём их из стилей
+  const cs = getComputedStyle(boardEl), wcs = getComputedStyle(wrapEl);
+  const gap = parseFloat(cs.columnGap) || 0;
+  const padX = (parseFloat(cs.paddingLeft) || 0) * 2 + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(wcs.paddingLeft) || 0);
+  const padY = (parseFloat(cs.paddingTop) || 0) * 2 + (parseFloat(cs.borderTopWidth) || 0);
+  const availW = fieldEl.clientWidth - 4 - padX;
+  const availH = fieldEl.clientHeight - 10 - padY;
+  let cell = Math.floor(Math.min((availW - gap * (W - 1)) / W, 54));
+  const fitRows = Math.max(rows, 6);   // маленькое поле не раздуваем
+  if (availH > 0) cell = Math.min(cell, Math.floor((availH - gap * (fitRows - 1)) / fitRows));
+  cell = Math.max(cell, 28);
+  document.documentElement.style.setProperty('--cell', cell + 'px');
+  fieldEl.classList.toggle('scroll', rows * cell + (rows - 1) * gap > availH);
+}
+
+/* ---------- оформление ---------- */
+const SKIN_PAPER = { sunflower: '#fff3d6', notebook: '#f5f8fc' };
+function currentSkin() { return document.documentElement.getAttribute('data-skin') || 'sunflower'; }
+function setSkin(name) {
+  document.documentElement.setAttribute('data-skin', name);
+  try { localStorage.setItem('semechki-skin', name); } catch (e) {}
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', SKIN_PAPER[name] || '#fff3d6');
+  document.querySelectorAll('#skins .skin').forEach(b => b.setAttribute('aria-pressed', b.dataset.skin === name));
+  haptic(10);
+  if (S) render();
+}
+function scrollFieldEnd() { fieldEl.scrollTop = fieldEl.scrollHeight; }
+
+/* ---------- вибрация ---------- */
+function haptic(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+
+/* ---------- отрисовка ---------- */
+function render() {
+  layout();
+  const c = S.cells;
+  const valid = chain.length >= 2 && evalLine(chain).valid;
+  boardEl.classList.toggle('writing', tool === 'write');
+  boardEl.classList.toggle('erasing', tool === 'erase');
+
+  const frag = document.createDocumentFragment();
+  const mk = (i, x) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.i = i;
+    const pos = chain.indexOf(i);
+    const showing = striking.has(i) || vanish.has(i);
+    const showDigit = x && (!x.dead || showing);
+    let cls = 'cell';
+    if (!x) cls += ' slot';
+    else if (x.dead && !showing) cls += ' dead';
+    if (striking.has(i)) cls += ' struck';
+    if (vanish.has(i)) cls += ' vanish';
+    if (sweep.has(i)) { cls += ' sweep'; b.style.setProperty('--col', i % W); }
+    if (pos >= 0) cls += ' sel' + (valid ? ' ok' : '');
+    if (pops.has(i) && x && !x.dead) cls += ' pop';
+    if (slideShift && slideShift[rowOf(i)] > 0) { cls += ' slide'; b.style.setProperty('--shift', slideShift[rowOf(i)]); }
+    if (i === writeTarget) cls += ' target';
+    b.className = cls;
+    if (showDigit) b.textContent = x.v;
+    if (pos >= 0 && chain.length > 1) {
+      const o = document.createElement('span'); o.className = 'ord'; o.textContent = pos + 1; b.appendChild(o);
+    }
+    const emptyCell = !x || x.dead;
+    b.setAttribute('aria-label', emptyCell ? 'пустая клетка' : pos >= 0 ? `${x.v}, выбрана` : `${x.v}`);
+    if (emptyCell && tool !== 'write') b.tabIndex = -1;
+    frag.appendChild(b);
+  };
+  c.forEach((x, i) => mk(i, x));
+  // хвост последней строки: в режиме «Вписать» туда тоже можно поставить цифру
+  const tail = (W - c.length % W) % W;
+  for (let k = 0; k < tail; k++) mk(c.length + k, null);
+  boardEl.replaceChildren(frag);
+  pops.clear(); slideShift = null;
+  sizeInk(); drawPreview();
+
+  const rows = Math.ceil(c.length / W);
+  $('s-score').textContent = S.score;
+  $('s-left').textContent = aliveCount();
+  $('s-stage').textContent = S.stage;
+  $('s-height').textContent = `${rows}/${MAX_ROWS}`;
+  $('height').classList.toggle('hot', rows >= MAX_ROWS - 2);
+  $('s-combo').textContent = S.combos || 0;
+  $('combo').classList.toggle('hot', (S.combos || 0) > 0);
+
+  const fits = rowsAfterAdd() <= MAX_ROWS;
+  $('b-add').textContent = S.adds > 0 && !fits ? 'Нет места' : `Дописать · ${S.adds}`;
+  $('b-add').disabled = !canAdd() || locked();
+  $('b-undo').disabled = history.length === 0 || S.cleared || busy;
+  $('b-hint').disabled = locked();
+  $('m-classic').classList.toggle('primary', S.mode === 'classic');
+  $('m-random').classList.toggle('primary', S.mode === 'random');
+
+  for (const k of ['write', 'erase', 'shuffle']) {
+    $('n-' + k).textContent = S.bonus[k];
+    $('x-' + k).disabled = S.bonus[k] <= 0 || locked();
+  }
+  $('x-write').setAttribute('aria-pressed', tool === 'write');
+  $('x-erase').setAttribute('aria-pressed', tool === 'erase');
+  $('picker').hidden = !(tool === 'write' && writeTarget >= 0);
+
+  const cb = $('b-commit');
+  cb.hidden = !valid || !!drag;
+  if (valid) {
+    const sc = scoreLine(chain);
+    cb.textContent = sc.combo
+      ? `Комбо ${sc.n} × ${sc.v} · +${sc.pts}`
+      : `Убрать ${chain.length} ${plural(chain.length)} · +${sc.pts}`;
+  }
+
+  renderPanel();
+}
+
+/* ---------- листы: этап пройден / ходов нет / конец игры / меню ---------- */
+let panelDismissed = false;   // игрок закрыл «Ходов нет», чтобы потратить бонус
+function renderPanel() {
+  const end = $('end'), acts = $('end-actions'), menu = $('menu');
+  const stuck = !busy && isStuck();
+  if (!stuck) panelDismissed = false;
+  const show = !!(S.over || S.cleared || (stuck && !panelDismissed)) && menu.hidden;
+  const wasHidden = end.hidden;
+  end.hidden = !show;
+  $('scrim').hidden = end.hidden && menu.hidden;
+  if (!show) return;
+  if (wasHidden) haptic(S.cleared ? [30, 60, 30, 60, 60] : S.over ? [60, 80, 60] : 20);
+
+  end.className = 'sheet end' + (stuck ? ' stuck' : '') + (S.cleared ? ' cleared' : '');
+  acts.replaceChildren();
+  const btn = (label, fn, primary) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn' + (primary ? ' primary' : ''); b.textContent = label; b.onclick = fn;
+    acts.appendChild(b);
+  };
+
+  if (S.over) {
+    $('end-title').textContent = 'Игра окончена';
+    const rec = S.newRecord
+      ? `<span class="rec">Новый рекорд!${S.prevRecord ? ` Прошлый — ${S.prevRecord}.` : ''}</span>`
+      : `<span class="rec old">Рекорд: ${S.prevRecord}</span>`;
+    $('end-text').innerHTML = `Этап ${S.stage} · ${S.score} очков<br>Строк убрано: ${S.rows}. Самая длинная линия: ${S.best || 0}. Комбо: ${S.combos || 0}${S.bestCombo ? `, лучшее на ${S.bestCombo} очков` : ''}.${rec}`;
+    btn('Новая игра', () => newGame(S.mode), true);
+  } else if (S.cleared) {
+    $('end-title').textContent = `Этап ${S.stage} пройден!`;
+    $('end-text').textContent = `+${S.stageBonus} очков: ${100 * S.stage} за этап и ${S.stageBonus - 100 * S.stage} за неиспользованные дописывания. Дописывания снова ${MAX_ADDS}, бонусы переходят как есть.`;
+    btn(`Этап ${S.stage + 1}`, nextStage, true);
+  } else {
+    $('end-title').textContent = 'Ходов нет';
+    $('end-text').textContent = totalBonus() > 0
+      ? `Можно дописать цифры (осталось ${S.adds}) или сначала потратить бонус. Когда ходов не будет и дописать станет нельзя, игра закончится.`
+      : `Можно дописать цифры (осталось ${S.adds}). Когда ходов не будет и дописать станет нельзя, игра закончится.`;
+    btn('Дописать', () => { addNumbers(); }, true);
+    if (totalBonus() > 0) btn('Потратить бонус', () => { panelDismissed = true; render(); });
+    btn('Закончить партию', finishGame);
+  }
+}
+
+function openMenu() { if (busy) return; $('menu').hidden = false; $('menu').scrollTop = 0; renderPanel(); }
+function closeMenu() { $('menu').hidden = true; renderPanel(); }
+
+/* ---------- мелочи ---------- */
+function plural(n) { return n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'цифры' : 'цифр'; }
+function flash(i, cls, ms) {
+  const el = cellEl(i);
+  if (!el) return;
+  el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  setTimeout(() => el.classList.remove(cls), ms);
+}
+function pulse(el, cls = 'pulse') { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); setTimeout(() => el.classList.remove(cls), 2100); }
+function setStatus(t, bad) { const s = $('status'); s.textContent = t; s.classList.toggle('bad', !!bad); if (bad) haptic([15, 40, 15]); }
+function setStatusHTML(h) { const s = $('status'); s.innerHTML = h; s.classList.remove('bad'); }
+function prefersReduced() { return matchMedia('(prefers-reduced-motion: reduce)').matches; }
+
+// подпись к текущей линии (общая для тапов и свайпа)
+function chainStatus() {
+  if (chain.length === 1) { setStatus(firstPrompt(S.cells[chain[0]].v)); return; }
+  const e = evalLine(chain);
+  if (e.valid) {
+    const sc = scoreLine(chain);
+    const what = sc.combo ? `${e.vals.join(' · ')} — комбо ${sc.n} × ${sc.v} = ${sc.pts}`
+      : e.sum === 10 ? `${e.vals.join(' + ')} = 10` : `${e.vals.join(' · ')}, все одинаковые`;
+    setStatusHTML(`<span class="sum">${what}</span> · отпусти, чтобы убрать`);
+  } else {
+    setStatusHTML(`<span class="sum">${e.vals.join(' + ')} = ${e.sum}</span> · нужно ещё ${10 - e.sum}${e.same ? ` или ещё одна ${e.vals[0]}` : ''}`);
+  }
+}
+
+/* ---------- ввод: тап и проведение пальцем ----------
+   Нажал и не двигал — обычный тап (onCell). Повёл палец — собираем линию:
+   клетка добавляется, только если палец ближе к её центру (чтобы на диагонали
+   не цеплять соседние клетки), и только если она продолжает линию. Отпустил —
+   линия убирается, если годится; иначе остаётся выбранной, её можно дотапать. */
+let drag = null;
+function cellUnder(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const cell = el && el.closest ? el.closest('.cell') : null;
+  if (!cell || !boardEl.contains(cell)) return -1;
+  const r = cell.getBoundingClientRect();
+  const dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
+  return Math.hypot(dx, dy) <= r.width * 0.4 ? +cell.dataset.i : -1;
+}
+
+function dragExtend(t) {
+  if (t < 0 || t >= S.cells.length || S.cells[t].dead || chain.includes(t)) return;
+  const prev = chain.slice(), prevDirs = chainDirs;
+  if (!tryExtend(t)) return;                 // палец задел клетку не на линии — пропускаем
+  const e = evalLine(chain);
+  if (!e.alive) {                            // перебор: откатываем шаг
+    chain = prev; chainDirs = prevDirs;
+    setStatus(`${e.vals.join(' + ')} = ${e.sum}, перебор.`, true);
+    render(); flash(t, 'shake', 300);
+    return;
+  }
+  haptic(8);
+  chainStatus();
+  render();
+}
+
+boardEl.addEventListener('pointerdown', e => {
+  if (e.button > 0 || locked()) return;
+  const cell = e.target.closest('.cell');
+  if (!cell) return;
+  drag = { id: e.pointerId, start: +cell.dataset.i, last: +cell.dataset.i, moved: false, x: e.clientX, y: e.clientY };
+  if (!fieldEl.classList.contains('scroll')) { try { boardEl.setPointerCapture(e.pointerId); } catch (err) {} }
+});
+
+boardEl.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id || tool) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+  const t = cellUnder(e.clientX, e.clientY);
+  if (t < 0 || t === drag.last) return;
+  if (!drag.moved) {
+    // начало свайпа: новая линия с той клетки, где палец опустился
+    const s = drag.start;
+    if (s >= S.cells.length || S.cells[s].dead) { drag = null; return; }
+    drag.moved = true;
+    clearChain(); tryExtend(s);
+    haptic(8);
+  }
+  drag.last = t;
+  dragExtend(t);
+});
+
+boardEl.addEventListener('pointerup', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null;
+  if (!d.moved) { onCell(d.start); if (chain.length === 1) haptic(6); return; }
+  if (chain.length >= 2 && evalLine(chain).valid) { haptic(25); commit(); }
+  else { if (chain.length >= 2) chainStatus(); render(); }
+});
+boardEl.addEventListener('pointercancel', () => { if (drag) { drag = null; render(); } });
+// клавиатура (Enter/пробел на клетке) приходит как click без указателя
+boardEl.addEventListener('click', e => {
+  if (e.detail !== 0) return;
+  const b = e.target.closest('.cell');
+  if (b) onCell(+b.dataset.i);
+});
+
+/* ---------- кнопки ---------- */
+for (let v = 1; v <= 9; v++) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = v; b.setAttribute('aria-label', `Вписать ${v}`);
+  b.onclick = () => writeDigit(v);
+  $('digits').appendChild(b);
+}
+$('b-commit').onclick = () => { haptic(25); commit(); };
+$('b-add').onclick = addNumbers;
+$('b-undo').onclick = undo;
+$('b-hint').onclick = hint;
+$('x-write').onclick = () => toggleTool('write');
+$('x-erase').onclick = () => toggleTool('erase');
+$('x-shuffle').onclick = shuffle;
+$('pick-cancel').onclick = () => { writeTarget = -1; setStatus('Вписать: нажми на пустую клетку.'); render(); };
+$('b-menu').onclick = openMenu;
+$('menu-close').onclick = closeMenu;
+$('m-classic').onclick = () => { $('menu').hidden = true; newGame('classic'); };
+$('m-random').onclick = () => { $('menu').hidden = true; newGame('random'); };
+document.querySelectorAll('#skins .skin').forEach(b => {
+  b.setAttribute('aria-pressed', b.dataset.skin === currentSkin());
+  b.onclick = () => setSkin(b.dataset.skin);
+});
+$('scrim').onclick = () => {
+  if (!$('menu').hidden) closeMenu();
+  else if (!S.over && !S.cleared && isStuck()) { panelDismissed = true; render(); }
+};
+window.addEventListener('resize', () => { if (S && !busy) render(); });
+
+/* ---------- старт ---------- */
+function start(data) {
+  const saved = data && data.S ? data.S : load();
+  if (saved && Array.isArray(saved.cells) && (saved.cells.length || saved.cleared || saved.over)) {
+    S = saved;
+    // сохранения из старых версий
+    if (!S.bonus) S.bonus = { ...START_BONUS };
+    if (S.combos == null) { S.combos = 0; S.bestCombo = 0; }
+    if (!S.stage) S.stage = 1;
+    if (S.rng == null) S.rng = freshSeed();
+    if (S.over === 'win') { S.over = null; stageClear(); }
+    else if (S.over && S.over !== 'end') S.over = 'end';
+    resetUI(); setStatus('Продолжаем. Проведи пальцем по линии или нажимай цифры.'); render();
+  } else {
+    newGame('classic');
+    setStatus('Проведи пальцем по цифрам вдоль линии: одинаковые или сумма 10.');
+  }
+  // первый запуск — показать правила
+  let seen = false;
+  try { seen = localStorage.getItem('semechki-seen') === '1'; localStorage.setItem('semechki-seen', '1'); } catch (e) {}
+  if (!seen) openMenu();
+}
+window.claude?.hot?.snapshot?.(() => ({ S }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+// шрифт с рукописными цифрами может догрузиться позже — пересчитать раскладку
+document.fonts?.ready?.then(() => { if (S && !busy) render(); });
+</script>
+</body>
+</html>
